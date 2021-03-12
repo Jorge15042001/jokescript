@@ -1,0 +1,29 @@
+[
+ {
+  "directory": "/home/jorge1504/Desktop/FILES/projects/jokescript",
+  "arguments": [
+   "g++",
+   "-std=c++20",
+   "-c",
+   "-o",
+   "build/obj/main.o",
+   "src/main.cpp",
+   "-Wall",
+   "-Wextra",
+   "-Wpedantic",
+   "-Waddress",
+   "-Waggressive-loop-optimizations",
+   "-Wdeprecated",
+   "-Weffc++",
+   "-Wformat",
+   "-Wignored-attributes",
+   "-Wignored-qualifiers",
+   "-Wliteral-suffix",
+   "-Wnoexcept",
+   "-Wreorder",
+   "-Wreturn-type",
+   "-Wunused"
+  ],
+  "file": "src/main.cpp"
+ }
+]

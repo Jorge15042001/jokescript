@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <iostream>
 #include "tokenizer.h"
 #include <vector>
@@ -10,8 +11,8 @@ int main(const int argc, const char ** argv)
     for (const auto & t:tokens)
     {
         std::cout<<"\nToken: "<<t.token_type;
-        std::cout<<"\tsize:"<<t.size<<"\n\tValues:";
-        for (int i =0; i<=t.size;i++){
+        std::cout<<"\n\tsize:"<<t.size<<"\n\tValues:";
+        for (size_t i =0; i<t.size;i++){
             std::cout<<*(t.start+i);
         }
         std::cout<<'\n';

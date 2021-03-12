@@ -10,8 +10,15 @@
 #include <vector>
 #include <ostream>
 
+#define ALL_NUMERIC_CHARS  '0':case'1':case'2':case'3':case'4':case'5':case'6':case'7':case'8':case'9'
+#define ALL_LOWER_LETTERS  'a':case'b':case'c':case'd':case'e':case'f':case'g':case'h':case'i':case'j':case'k':case'l':case'm':case'n':case'o':case'p':case'q':case'r':case's':case't':case'u':case'v':case'w':case'x':case'y':case'z'
+#define ALL_UPPER_LETTERS  'A':case'B':case'C':case'D':case'E':case'F':case'G':case'H':case'I':case'J':case'K':case'L':case'M':case'N':case'O':case'P':case'Q':case'R':case'S':case'T':case'U':case'V':case'W':case'X':case'Y':case'Z'
+
+
+
 struct file_content
 {
+
     const char *const file_name;
     const char *const  f_content;
     const size_t f_size;
@@ -62,7 +69,12 @@ namespace tokenizer {
         COMMA,
         DOT,
         EQUAL,
-        SEMICOLUN
+        SEMICOLUN,
+        PLUS,
+        MINUN,
+        ASTERISK,
+        SLASH,
+        BACKSLAH,
     };
     std::ostream& operator<< (std::ostream& o, const TokenType t)
     {
@@ -82,6 +94,12 @@ namespace tokenizer {
             case TokenType::DOT:o<<" DOT ";break;
             case TokenType::EQUAL:o<<" EQUAL ";break;
             case TokenType::SEMICOLUN:o<<" SEMICOLUN ";break;
+            case TokenType::PLUS:o<<" PLUS ";break;
+            case TokenType::MINUN:o<<" MINUN ";break;
+            case TokenType::ASTERISK:o<<" ASTERISK ";break;
+            case TokenType::SLASH:o<<" SLASH ";break;
+            case TokenType::BACKSLAH:o<<" BACKSLAH ";break;
+            default:o <<"UNKNOWN TOKEN TYPE";
         }
         return o;
     }
@@ -89,17 +107,30 @@ namespace tokenizer {
     {
         const TokenType token_type;
         const char * start;
-        size_t size;
-        Token(TokenType token_type,const char * start, const size_t size):
+        const size_t size;
+        const int line_number;
+        const int column_number;
+        Token(  const TokenType token_type,
+                const char * start,
+                const size_t size,
+                const int line_number,
+                const int column_number) noexcept:
             token_type(token_type),
             start(start),
-            size(size)
+            size(size),
+            line_number(line_number),
+            column_number(column_number) 
         {
         }
+
     };
     
     std::vector<Token> tokenize(const file_content& f_c)
     {
+
+        size_t line_number = 0;
+        size_t char_pos = 0;
+        
         std::vector<Token> tokens;
         tokens.reserve(1000);
         const char * file_end=f_c.f_content+f_c.f_size;
@@ -111,33 +142,33 @@ namespace tokenizer {
         const char * token_start;//defines wehere the token start 
         bool token_is_open = false;
 
+
         auto open_token=[&](TokenType t)
         {
             token_start = iterator;
             actual_type = t;
             token_is_open = true;
         };
-        auto close_token=[&](const int ignore_start=0, const int ignore_end=1)
+
+        auto close_token=[&](const int ignore_start=0, const int ignore_end=0)
         {
             const char * start=token_start+ignore_start;
             const char * end= iterator-ignore_end;
 
-
-            if (actual_type==TokenType::STRING_LITERAL)start++;
-
-            tokens.emplace_back(actual_type,start,end-start );
-            //reset values 
+            tokens.emplace_back(actual_type,start,end-start +1,line_number,char_pos);
             actual_type=TokenType::WHITE_SPACE;
             token_is_open=false;
+        };
 
-        };
-        auto update_token_type=[&](const TokenType t)
-        {
-            actual_type=t;
-        };
-        
+        auto close_token_ignore_last=[&](){close_token(0,1);};
+
+        auto token_is=[&](const TokenType t){return actual_type==t;};
+        auto update_token_type=[&](const TokenType t){actual_type=t;};
+
         auto add_monochar_token=[&](const  TokenType t)
         {
+            if(actual_type==TokenType::STRING_LITERAL) return;
+            if(token_is_open)close_token(0,1);
             open_token(t);
             close_token(0,0);
         };
@@ -146,83 +177,57 @@ namespace tokenizer {
         for (;iterator!=file_end;iterator++)
         {
             const char character= *iterator;
+            
+            
             switch (character) {
-                case '0' ... '9':
+                case'\n':
+                    line_number++;
+                    char_pos=0;
+                    break;
+                case ALL_NUMERIC_CHARS:
                     if(!token_is_open)open_token(TokenType::INT_LITERAL);
                     break;
                 case '"':
                     if(!token_is_open)open_token(TokenType::STRING_LITERAL);
-                    else if(actual_type==TokenType::STRING_LITERAL)close_token();
+                    else if(token_is(TokenType::STRING_LITERAL))close_token();
                     break;
-                case ' '://close any token, but ignores spaces
-                    if(actual_type == TokenType::WHITE_SPACE)break;;
-                    if(actual_type != TokenType::STRING_LITERAL) close_token();
-                    break;
-
-                case 'a' ... 'z':
-                case 'A' ... 'Z':
-                case '_':
+                case ALL_UPPER_LETTERS :case ALL_LOWER_LETTERS:case '_':
                     if(!token_is_open)open_token(TokenType::IDENTIFIER);
                     break;
                     
                 //monocharaceter tokens, if actual token is not string, then acutal token is close
-                case ',':
-                    if (actual_type == TokenType::STRING_LITERAL) break;
-                    if (token_is_open)close_token();
-                    add_monochar_token(TokenType::COMMA);
+                //if a monoCharacterOperator closes an open token it must do it up to the previus character, so it doesnt include itself
+                case ' '://close any token, but ignores spaces
+                    if(token_is(TokenType::WHITE_SPACE))break;;
+                    if(actual_type != TokenType::STRING_LITERAL) close_token_ignore_last();
                     break;
+
+                case ',':add_monochar_token(TokenType::COMMA);break;
                 case '.' :
                     if (actual_type==TokenType::INT_LITERAL){
                         update_token_type(TokenType::DECIMAL_LITERAL);
                         break;
                     }
-                    if(token_is_open)close_token();
                     add_monochar_token(TokenType::DOT);
                     break;
-                case '(':
-                    if(actual_type == TokenType::STRING_LITERAL)break;
-                    if (token_is_open)close_token();// 
-                    add_monochar_token(TokenType::OPEN_PARENTHESIS);
-                    break;
-                case ')':
-                    if(actual_type == TokenType::STRING_LITERAL)break;
-                    if (token_is_open)close_token();// 
-                    add_monochar_token(TokenType::CLOSE_PARENTHESIS);
-                    break;
-                case '[':
-                    if(actual_type == TokenType::STRING_LITERAL)break;
-                    if (token_is_open)close_token();// 
-                    add_monochar_token(TokenType::OPEN_BRACKETS);
-                    break;
-                case ']':
-                    if(actual_type == TokenType::STRING_LITERAL)break;
-                    if (token_is_open)close_token();// 
-                    add_monochar_token(TokenType::CLOSE_BRACKETS);
-                    break;
-                case '{':
-                    if(actual_type == TokenType::STRING_LITERAL)break;
-                    if (token_is_open)close_token();// 
-                    add_monochar_token(TokenType::OPEN_SCOPE);
-                    break;
-                case '}':
-                    if(actual_type == TokenType::STRING_LITERAL)break;
-                    if (token_is_open)close_token();// 
-                    add_monochar_token(TokenType::CLOSE_SCOPE);
-                    break;
-                case '=':
-                    if(actual_type == TokenType::STRING_LITERAL)break;
-                    if (token_is_open)close_token();// 
-                    add_monochar_token(TokenType::EQUAL);
-                    break;
-                case ';':
-                    if(actual_type == TokenType::STRING_LITERAL)break;
-                    if (token_is_open)close_token();// 
-                    add_monochar_token(TokenType::SEMICOLUN);
-                    break;
+                case '(':add_monochar_token(TokenType::OPEN_PARENTHESIS);break;
+                case ')':add_monochar_token(TokenType::CLOSE_PARENTHESIS);break;
+                case '[':add_monochar_token(TokenType::OPEN_BRACKETS);break;
+                case ']':add_monochar_token(TokenType::CLOSE_BRACKETS);break;
+                case '{':add_monochar_token(TokenType::OPEN_SCOPE);break;
+                case '}':add_monochar_token(TokenType::CLOSE_SCOPE);break;
+                case '=':add_monochar_token(TokenType::EQUAL);break;
+                case ';':add_monochar_token(TokenType::SEMICOLUN);break;
+                case '+':add_monochar_token(TokenType::PLUS);break;
+                case '-':add_monochar_token(TokenType::MINUN);break;
+                case '/':add_monochar_token(TokenType::SLASH);break;
+                case '*':add_monochar_token(TokenType::ASTERISK);break;
+                case '\\':add_monochar_token(TokenType::BACKSLAH);break;
+                
 
 
             }
-            //std::cout<<"Tokenizing: "<<character<<" actual_type:"<<actual_type<<" open:"<<token_is_open<<'\n';
+            char_pos++;//advance the column nnumber;
         }
 
        return tokens;
