@@ -64,6 +64,8 @@ namespace tokenizer {
         CLOSE_PARENTHESIS,
         OPEN_BRACKETS,
         CLOSE_BRACKETS,
+        GRATHER_THAN,
+        LESSER_THAN,
         IDENTIFIER,
         WHITE_SPACE,
         COMMA,
@@ -75,6 +77,9 @@ namespace tokenizer {
         ASTERISK,
         SLASH,
         BACKSLAH,
+        COMMENT,
+        FUNCTION,
+        FUNCITON_PARAMETER
     };
     std::ostream& operator<< (std::ostream& o, const TokenType t)
     {
@@ -98,6 +103,9 @@ namespace tokenizer {
             case TokenType::MINUN:o<<" MINUN ";break;
             case TokenType::ASTERISK:o<<" ASTERISK ";break;
             case TokenType::SLASH:o<<" SLASH ";break;
+            case TokenType::BACKSLAH:o<<" BACKSLAH ";break;
+            case TokenType::BACKSLAH:o<<" BACKSLAH ";break;
+            case TokenType::BACKSLAH:o<<" BACKSLAH ";break;
             case TokenType::BACKSLAH:o<<" BACKSLAH ";break;
             default:o <<"UNKNOWN TOKEN TYPE";
         }
